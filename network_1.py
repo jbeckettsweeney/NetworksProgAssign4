@@ -138,15 +138,31 @@ class Router:
         self.intf_L = [Interface(max_queue_size) for _ in range(len(cost_D))]
         # save neighbors and interfeces on which we connect to them
         self.cost_D = cost_D  # {neighbor: {interface: cost}}
+<<<<<<< HEAD
         #adds the routing cost for the router to itself as zero
         self.rt_tbl_D = {router:{router:0}}# {destination: {router: cost}}
         for destination in list(self.cost_D):#sets up the routing table for this specific router
             for interface in list(self.cost_D[destination]):
                 cost=int(self.cost_D[destination][interface])
                 self.rt_tbl_D.update({destination:{router:cost}})
+=======
+        # TODO: set up the routing table for connected hosts
+        self.rt_tbl_D = {}  # {destination: {router: cost}}
+        self.neighbors = {}
+        self.message = "";
+>>>>>>> 05a1b630a06b962bbfd4cf3b0c430de79a7dc14a
         print('%s: Initialized routing table' % self)
+        targets = list(cost_D.keys())
+        weights = list(cost_D.values())
+        self.rt_tbl_D = {self.name: {self.name: 0}}     #initialize with itself set to 0
+        print(targets)
+        print(weights)
+        for i in range(len(targets)):     #add available routes
+            self.rt_tbl_D[targets[i]] = {self.name: list(weights[i].values())[0]}
+            self.message
         self.print_routes()
 
+<<<<<<< HEAD
     ##determine lowest interface costs
     def findLowest(self):
         for neighbor in self.cost_D:
@@ -202,6 +218,27 @@ class Router:
         for destinations in list(self.rt_tbl_D):
             print("╧══════", end = '')
         print("╛")
+=======
+    def routeMessage(self):
+        numRouters = 0;
+        numRoutes = 0;
+
+
+    ## Print routing table
+    def print_routes(self):
+        # TODO: print the routes as a two dimensional table
+        print("full table: ", self.rt_tbl_D)
+        print()
+        print(self.name, end=" || ")
+        for i in self.rt_tbl_D.keys():
+            print(i, end =" | ")
+        print()
+        print(list(list(self.rt_tbl_D.values())[0].keys())[0], end=" || ")
+        for i in self.rt_tbl_D.values():
+            print(list(i.values())[0], end="  | ")
+        print()
+        print()
+>>>>>>> 05a1b630a06b962bbfd4cf3b0c430de79a7dc14a
 
     ## called when printing the object
     def __str__(self):
