@@ -1,6 +1,6 @@
 import queue
 import threading
-
+import ast
 
 ## wrapper class for a queue of packets
 class Interface:
@@ -133,19 +133,75 @@ class Router:
     def __init__(self, name, cost_D, max_queue_size):
         self.stop = False  # for thread termination
         self.name = name
+        router = self.name
         # create a list of interfaces
         self.intf_L = [Interface(max_queue_size) for _ in range(len(cost_D))]
         # save neighbors and interfeces on which we connect to them
         self.cost_D = cost_D  # {neighbor: {interface: cost}}
-        # TODO: set up the routing table for connected hosts
-        self.rt_tbl_D = {}  # {destination: {router: cost}}
+        #adds the routing cost for the router to itself as zero
+        self.rt_tbl_D = {router:{router:0}}# {destination: {router: cost}}
+        for destination in list(self.cost_D):#sets up the routing table for this specific router
+            for interface in list(self.cost_D[destination]):
+                cost=int(self.cost_D[destination][interface])
+                self.rt_tbl_D.update({destination:{router:cost}})
         print('%s: Initialized routing table' % self)
         self.print_routes()
 
+    ##determine lowest interface costs
+    def findLowest(self):
+        for neighbor in self.cost_D:
+            if 'R' in str(neighbor):
+                lowestCost=100 #arbitrary large number
+                for interface in list(self.cost_D[neighbor]):
+                    currentCost = self.cost_D[neighbor][interface]
+                    if currentCost< lowestCost:
+                        lowestCost= currentCost
+                        lowestCostingInterface = interface
+                self.send_routes(lowestCostingInterface)
+
+                
     ## Print routing table
     def print_routes(self):
-        # TODO: print the routes as a two dimensional table
-        print(self.rt_tbl_D)
+        #determine number of different routers in network
+        routerList = []
+        for destination in list(self.rt_tbl_D):
+            for router in list(self.rt_tbl_D[destination]):
+                if router not in routerList:
+                    routerList.append(router)
+
+        #print top line
+        print("╒══════", end = '')
+        #create columns depending on num of destinations
+        for destination in list(self.rt_tbl_D):
+            print("╤══════",end = '')
+        print("╕")
+        # add top line info
+        print("| ", self.name, " ", end = '')
+        for destination in sorted(self.rt_tbl_D): #use sorted to keep in order
+            print("| ", destination, " ", end = '')
+        print("|")
+
+        #print subsequent rows
+        #iterate through how many routers/rows there are
+        for router in routerList:
+            #add row top line
+            print("╞══════", end = '')
+            for destination in list(self.rt_tbl_D):
+                print("╪══════", end = '')
+            print("╡")
+            #add row info
+            print("| ", router, " ", end = '')
+            for destination in sorted(self.rt_tbl_D):
+                cost = int(self.rt_tbl_D[destination][router])
+                print("|  ", cost, " ", end = '')
+            print("|")
+
+        #print bottom line
+        print("╘══════", end = '')
+        #create columns depending on num of destinations
+        for destinations in list(self.rt_tbl_D):
+            print("╧══════", end = '')
+        print("╛")
 
     ## called when printing the object
     def __str__(self):
@@ -186,22 +242,47 @@ class Router:
     ## send out route update
     # @param i Interface number on which to send out a routing update
     def send_routes(self, i):
-        # TODO: Send out a routing table update
-        # create a routing table update packet
-        p = NetworkPacket(0, 'control', 'DUMMY_ROUTING_TABLE')
-        try:
-            print('%s: sending routing update "%s" from interface %d' % (self, p, i))
-            self.intf_L[i].put(p.to_byte_S(), 'out', True)
-        except queue.Full:
-            print('%s: packet "%s" lost on interface %d' % (self, p, i))
-            pass
+        routingUpdate=[]
+        for destination in list(self.rt_tbl_D):
+            cost=str(self.rt_tbl_D[destination][self.name])
+            routeInfo=[[str(destination)], [self.name], [cost]]
+            routingUpdate.append(routeInfo)
+            p=NetworkPacket(0,'control',str(routingUpdate))
+            try:
+                print('%s:sending routing update "%s" from interface %d' % (self,p,i))
+                self.intf_L[i].put(p.to_byte_S(), 'out', True)
+            except queue.Full:
+                pass
 
     ## forward the packet according to the routing table
     #  @param p Packet containing routing information
     def update_routes(self, p, i):
-        # TODO: add logic to update the routing tables and
-        # possibly send out routing updates
-        print('%s: Received routing update %s from interface %d' % (self, p, i))
+        print('%s: Received routing update %s from interface %d' %(self, p,i))
+        update = False
+        if p.prot_S=='control':
+            routingTable=ast.literal_eval(p.data_S)#convert routing string back to list
+            for info in routingTable:
+                destination =''.join(info[0])
+                router=''.join(info[1])
+                cost=int(''.join(info[2]))
+                if destination not in self.rt_tbl_D:
+                    self.rt_tbl_D[destination]={router:cost}
+                else:
+                    self.rt_tbl_D[destination][router]=cost
+                if self.name not in self.rt_tbl_D[destination]:
+                    self.rt_tbl_D[destination][self.name]=self.rt_tbl_D[destination][router]+self.rt_tbl_D[router][self.name]
+                    update = True
+                else:
+                    if self.rt_tbl_D[destination][router]+ self.rt_tbl_D[router][self.name]< self.rt_tbl_D[destination][self.name]:
+                        self.rt_tbl_D[destination][self.name]=self.rt_tbl_D[destination][router]+self.rt_tbl_D[router][self.name]
+                        update=True
+                    
+        else:
+            print("Not a control packet")
+        if update:
+            self.findLowest()
+        else:
+            return
 
     ## thread target for the host to keep forwarding data
     def run(self):
