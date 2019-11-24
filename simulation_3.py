@@ -6,7 +6,7 @@ import sys
 
 ##configuration parameters
 router_queue_size = 0  # 0 means unlimited
-simulation_time = 1  # give the network sufficient time to execute transfers
+simulation_time = 5  # give the network sufficient time to execute transfers
 
 if __name__ == '__main__':
     object_L = []  # keeps track of objects, so we can kill their threads at the end
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     object_L.append(router_c)
 
     cost_D = {'H2': {2: 1}, 'RB': {0: 3}, 'RC': {1: 1}}  # {neighbor: {interface: cost}}
-    router_d = network.Router(name='RA',
+    router_d = network.Router(name='RD',
                               cost_D=cost_D,
                               max_queue_size=router_queue_size)
     object_L.append(router_d)
