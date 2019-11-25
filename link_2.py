@@ -1,7 +1,6 @@
 import queue
 import threading
 
-
 ## An abstraction of a link between router interfaces
 class Link:
 

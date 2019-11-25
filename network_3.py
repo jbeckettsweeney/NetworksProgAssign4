@@ -274,8 +274,9 @@ class Router:
                     found = 1
                     #print("---DOES NOT ENTER WHILE LOOP---")
 
-            #if first step didn't fine adjacent interface
+            #if first step didn't find adjacent interface
             found = 1
+            #set found to 1 to avoid infinite loop in incomplete code
             while found == 0:
                 #print("not yet found")
                 #for each key in routing table
@@ -305,10 +306,13 @@ class Router:
                                     tempCost = list(list(self.rt_tbl_D.values())[key].values())[value]
                                     #print("tempDest: ", tempDest)
                                     #print("tempCost: ", tempCost)
+                                    #uncertain where to go from here
 
             #print(list(list(self.rt_tbl_D.values())[0].keys())[0])  # first value's first key
             #print(list(list(self.rt_tbl_D.values())[0].values())[0])  # first value's first value
 
+
+            #hardcoded to make sure everything does route
             if self.name == 'RB':
                 if interface == 0:
                     interface = 1
